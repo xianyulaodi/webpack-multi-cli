@@ -25,3 +25,5 @@ inquirer.js — 命令行用户界面
 2. https://www.jianshu.com/p/1c5d086c68fa  手把手教你写一个 Node.js CLI
 3. https://github.com/allanguys/tg-cli
 4. https://blog.csdn.net/qq_26733915/article/details/80461257
+5. https://juejin.im/post/5c94fef7f265da60fd0c15e8 仿 vue-cli 搭建属于自己的脚手架
+6. https://juejin.im/post/5b2872516fb9a00e8626e34f#heading-12
