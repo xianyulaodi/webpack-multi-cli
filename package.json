@@ -4,7 +4,7 @@
   "description": "create webpack-multi cli",
   "main": "index.js",
   "bin": {
-    "webpack-multi-cli": "index.js"
+    "webpack-multi-cli": "bin/index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -29,6 +29,7 @@
   "devDependencies": {
     "chalk": "^2.4.2",
     "clear": "0.0.1",
+    "commander": "^2.20.0",
     "figlet": "^1.2.1",
     "inquirer": "^5.2.0"
   }
