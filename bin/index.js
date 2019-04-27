@@ -5,28 +5,10 @@ const path = require('path');
 const fs = require('fs-extra');
 const ora = require('ora'); // 终端显示的转轮loading
 const chalk = require('chalk');
-const clear = require('clear');
 const figlet = require('figlet');
 var exec = require('promise-exec');
 const currentPath = process.cwd();  // 当前目录路径
 const templatePath = path.resolve(__dirname, '../template\/');
-
-const launch = async () => {
-    const config = {
-        projectName: 'test',
-        description: 'A webpack-multi project',
-        author: '',
-        isNeedVueRouter: true,
-        cssPreprocessor: 'scss',
-        isNeedMockjs: true,
-        isNpmInstall: ''
-    }
-    createTemplate(config);
-    // const config = await inquirer.getQuestions();
-
-    // console.log(config);
-}
-launch();
 
 function handlePackageJson(config) {
     const spinner = ora('正在写入package.json...').start();
@@ -39,21 +21,15 @@ function handlePackageJson(config) {
             json.name = config.projectName;
             json.description = config.description;
             json.author = config.author;
-            if (config.isNeedMockjs) {
-                json.devDependencies = Object.assign(json.devDependencies, { "mockjs": "^1.0.1-beta3" });
-            }
             if(config.cssPreprocessor == 'less') {
-                json.devDependencies = Object.assign(json.dependencies, { 
-                    "less": "^3.9.0",
+                json.devDependencies = Object.assign(json.devDependencies, { 
                     "less-loader": "^4.1.0"
                 });
             } else {
-                json.devDependencies = Object.assign(json.dependencies, { 
-                    "sass-loader": "^7.1.0"
+                json.devDependencies = Object.assign(json.devDependencies, { 
+                    "sass-loader": "^7.1.0",
+                    "node-sass": "^4.11.0"
                 });
-            }
-            if (config.isNeedVueRouter) {
-                json.dependencies = Object.assign(json.dependencies, { "vue-router": "^3.0.2" });
             }
             fs.writeJSON(path.resolve(`${currentPath}/${config.projectName}/package.json`), json, err => {
                 if (err) {
@@ -112,39 +88,42 @@ function successConsole(config) {
 
 
 function createTemplate(config) {
-    const spinner = ora('正在生成...').start();
     const projectName = config.projectName;
-    // if (fs.pathExistsSync(path.resolve(currentPath, `${projectName}`))) {
-    //     console.log(chalk.red(`您创建的项目名:${projectName}已存在，创建失败，请修改项目名后重试`));
-    //     process.exit(1);
-    //     return; 
-    // } else {
-        fs.copy(path.resolve(templatePath), path.resolve(`${currentPath}/${projectName}`))
-        .then(() => {
-            spinner.stop();
-            ora(chalk.green('目录生成成功！')).succeed();
-            return handlePackageJson(config);
-        })
-        .then(() => {
-            return handleWebpackBase(config);
-        })
-        .then(() => {
-            if(config.isNpmInstall == 'npm') {
-                const spinnerInstall = ora('安装依赖中...').start();
-                exec('npm install', {
-					cwd: `${currentPath}/${projectName}`
-				}).then(function(){
-					console.log('')
-					spinnerInstall.stop();
- 					ora(chalk.green('相赖安装成功！')).succeed();
-                    successConsole(config);
-				}).catch(function(err) {
-		            console.error(err);
-		        });
-            } else {
-                successConsole(config);
+    const spinner = ora('正在生成...').start();
+    fs.copy(path.resolve(templatePath), path.resolve(`${currentPath}/${projectName}`))
+    .then(() => {
+        spinner.stop();
+        ora(chalk.green('目录生成成功！')).succeed();
+        return handlePackageJson(config);
+    })
+    .then(() => {
+        return handleWebpackBase(config);
+    })
+    .then(() => {
+        if(config.isNpmInstall == 'npm') {
+            const spinnerInstall = ora('安装依赖中...').start();
+            if(config.cssPreprocessor == 'sass') {
+                console.log('如果node-sass安装失败，请查看：https://github.com/sass/node-sass');
             }
-        })
-        .catch(err => console.error(err))
-    // }
+            exec('npm install', {
+                cwd: `${currentPath}/${projectName}`
+            }).then(function(){
+                console.log('')
+                spinnerInstall.stop();
+                ora(chalk.green('相赖安装成功！')).succeed();
+                successConsole(config);
+            }).catch(function(err) {
+                console.error(err);
+            });
+        } else {
+            successConsole(config);
+        }
+    })
+    .catch(err => console.error(err))
 }
+
+const launch = async () => {
+    const config = await inquirer.getQuestions();
+    createTemplate(config);
+}
+launch();

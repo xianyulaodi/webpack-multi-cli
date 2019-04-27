@@ -41,10 +41,8 @@ Should we run npm install for you after the project has been created? (recommend
 Project name: 项目名称,如果不改，则为npm init时的项目名
 Project description A webpack-multi project： 项目描述，也可直接点击回车，使用默认名字
 Author： 作者
-Install vue-router? 是否安装vue-router
-Pick a css preprocessor? 选择一个css预处理器
-Install Mockjs? 是否引入mockjs
-Should we run npm install for you after the project has been created? (recommended) npm：是否帮你`npm install`
+Pick a css preprocessor? 选择一个css预处理器，可选择是less或者是sass
+Should we run npm install for you after the project has been created? (recommended) npm：是否帮你`npm install`,如果输入npm命令，则帮你执行npm install
 ```
 
 ## 开始构建
@@ -52,13 +50,187 @@ Should we run npm install for you after the project has been created? (recommend
 在开始构建之前，我们需要安装一些npm包：
 
 `chalk` ：彩色输出
-`clear` ： 清空命令行屏幕
-`clui` ：绘制命令行中的表格、仪表盘、加载指示器等。 
 `figlet` ：生成字符图案
-`inquirer` ：创建交互式的命令行界面
-`minimist` ：解析参数
-`configstore`：轻松加载和保存配置
-`inquirer.js` 命令行用户界面
+`inquirer` ：创建交互式的命令行界面,就是这些问答的界面
+`inquirer` 命令行用户界面
+`commander` 自定义命令
+`fs-extra`  文件操作
+`ora`  制作转圈效果
+`promise-exec` 执行子进程
+
+#### 编写package.json文件
+
+看看我们最终的package.json文件
+
+```javascript
+{
+  "name": "webpack-multi-cli",
+  "version": "1.0.0",
+  "description": "create webpack-multi cli",
+  "main": "index.js",
+  "bin": {
+    "webpack-multi-cli": "bin/index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xianyulaodi/webpack-multi-cli.git"
+  },
+  "author": "xianyulaodi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/xianyulaodi/webpack-multi-cli/issues"
+  },
+  "dependencies": {
+    "chalk": "^2.4.2",
+    "commander": "^2.20.0",
+    "figlet": "^1.2.1",
+    "fs-extra": "^7.0.1",
+    "inquirer": "^5.2.0",
+    "ora": "^3.4.0",
+    "promise-exec": "^0.1.0"
+  },
+  "homepage": "https://github.com/xianyulaodi/webpack-multi-cli#readme"
+}
+```
+
+我们的入口文件为`bin/index.js`,类似于`vue-cli init 项目名`，我们一开始的命令为：`webpack-multi-cli init 项目名`，因此package.json的bin需要这样写
+
+```javascript
+...
+"bin": {
+   "webpack-multi-cli": "bin/index.js"
+}
+..
+```
+
+#### 编写init命令
+
+接下来编写自定义的init命令，依赖于commander这个库
+lib/cmd.js
+
+```javascript
+#!/usr/bin/env node
+
+const program = require("commander");
+const path = require('path');
+const currentPath = process.cwd();  // 当前目录路径
+const fs = require('fs-extra');
+let projectName = null;
+
+
+// 定义指令
+program
+  .version(require('../package.json').version)
+  .command('init <name>')
+  .action(function (name) {
+    projectName = name;
+  });
+  program.parse(process.argv);
+  program.projectName = projectName;
+
+if (!projectName) {
+  console.error('no project name was given, eg: webpack-multi-cli init myProject');
+  process.exit(1);
+}
+
+if (fs.pathExistsSync(path.resolve(currentPath, `${projectName}`))) {
+  console.error(`您创建的项目名:${projectName}已存在，创建失败，请修改项目名后重试`);
+  process.exit(1);
+}
+
+module.exports = program;
+
+```
+如果没有传入项目名，或者传入的项目名称已经存在，则抛出异常，并结束程序，顺便把项目名称存起来,当做一个默认名称。还记得我们的命令不，
+```javascript
+Project name test： // 项目名称,如果不改，就直接原来的test名称
+```
+这个默认的项目名称就是这里来的
+
+#### 编写交互问题
+
+这里依赖于`inquirer`这个库
+
+lib/inquirer.ja
+
+```javascript
+const inquirer = require('inquirer');
+const cmd = require('./cmd');
+const projectName = cmd.projectName;
+
+module.exports = {
+
+    getQuestions: () => {
+
+        const questions = [
+            {
+                name: 'projectName',
+                type: 'input',
+                message: 'Project name',
+                default: projectName
+            },
+            {
+                name: 'description',
+                type: 'input',
+                message: `Project description`,
+                default: 'A webpack-multi project'
+            },
+            {
+                name: 'author',
+                type: 'input',
+                message: `Author`,
+            },
+            {
+                name: 'cssPreprocessor',
+                type: 'list',
+                message: 'Pick an css preprocessor',
+                choices: [
+                    "less",
+                    "sass"
+                ]
+            },
+            {
+                name: 'isNpmInstall',
+                type: 'input',
+                message: 'Should we run `npm install` for you after the project has been create?<recommended>',
+            }
+        ];
+        return inquirer.prompt(questions);
+    },
+}
+```
+主要就是我们的一些交互问题，具体这个库的用法，可以google之
+
+#### 主文件
+
+bin/index.js
+
+我们这边的思路是，新建一个template目录，用来存在我们的webpack配置模板，将你输入的那些问题，比如项目名，作者、描述、选择less还是sass等，写入这些配置文件中，然后再下载到你执行命令的根目录下
+
+还有一种思路是获取你回到的交互问题，然后从github中获取文件，再下载到你执行命令的根目录下
+
+知道这个思路后，就比较简单了
+
+先来获取你输入命令的当前路径
+```javascript
+const currentPath = process.cwd();  // 当前目录路径
+```
+
+获取输入的交互问题
+```javascript
+const config = await inquirer.getQuestions();
+```
+
+
+
+
+
+
+
+
 
 
 参考：
