@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 const ora = require('ora'); // 终端显示的转轮loading
 const chalk = require('chalk');
 const figlet = require('figlet');
-var exec = require('promise-exec');
+const exec = require('promise-exec');
 const currentPath = process.cwd();  // 当前目录路径
 const templatePath = path.resolve(__dirname, '../template\/');
 
@@ -23,6 +23,7 @@ function handlePackageJson(config) {
             json.author = config.author;
             if(config.cssPreprocessor == 'less') {
                 json.devDependencies = Object.assign(json.devDependencies, { 
+                    "less": "^3.9.0",
                     "less-loader": "^4.1.0"
                 });
             } else {
